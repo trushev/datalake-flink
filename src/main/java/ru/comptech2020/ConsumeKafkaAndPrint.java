@@ -3,7 +3,7 @@ package ru.comptech2020;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer010;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 
 import java.util.Properties;
 
@@ -32,7 +32,7 @@ public class ConsumeKafkaAndPrint {
         kafkaProps.setProperty("bootstrap.servers", kafkaServer);
         kafkaProps.setProperty("zookeeper.connect", zookeeper);
         kafkaProps.setProperty("group.id", groupId);
-        final FlinkKafkaConsumer010<String> eventsConsumer = new FlinkKafkaConsumer010<>(
+        final FlinkKafkaConsumer011<String> eventsConsumer = new FlinkKafkaConsumer011<>(
                 topicName,
                 new SimpleStringSchema(),
                 kafkaProps
