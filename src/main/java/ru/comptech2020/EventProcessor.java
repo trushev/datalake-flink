@@ -69,6 +69,7 @@ public class EventProcessor {
                     }
                 }
         );
+        esSinkBuilder.setBulkFlushMaxActions(1);
         events.addSink(esSinkBuilder.build());
         env.execute();
     }
