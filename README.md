@@ -4,4 +4,4 @@
 
 ```
 mvn clean package
-mvn exec:java -Dexec.mainClass=ru.comptech2020.WikipediaAnalysis
+mvn exec:java -Dexec.mainClass=ru.comptech2020.ConsumeKafkaAndPrint
