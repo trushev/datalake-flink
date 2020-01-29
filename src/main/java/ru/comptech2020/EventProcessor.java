@@ -1,76 +1,71 @@
 package ru.comptech2020;
 
-import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.elasticsearch.ElasticsearchSinkFunction;
-import org.apache.flink.streaming.connectors.elasticsearch.RequestIndexer;
 import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.http.HttpHost;
-import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.Requests;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import ru.comptech2020.events.Event;
+import ru.comptech2020.events.UserLocation;
+import ru.comptech2020.exceptions.EventParseException;
 
 import java.util.*;
 
 public class EventProcessor {
-    private static final String TOPIC = "events";
-    private static final String KAFKA_SERVER = "localhost:9092";
-    private static final String ZOOKEEPER = "localhost:2181";
-    private static final String GROUP_ID = "group_id";
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventProcessor.class);
 
-    private static Properties getKafkaProps() {
+    private static final String ZOOKEEPER = "localhost:2181";
+    private static final String KAFKA_SERVER = "localhost:9092";
+    private static final String TOPIC = "events";
+    private static final String GROUP_ID = "group_id";
+    private static final String ELASTIC_SERVER = "localhost:9200";
+    private static final String ELASTIC_INDEX = "events";
+
+    private static FlinkKafkaConsumer011<String> createKafkaConsumer() {
         final Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", KAFKA_SERVER);
         kafkaProps.setProperty("zookeeper.connect", ZOOKEEPER);
         kafkaProps.setProperty("group.id", GROUP_ID);
-        return kafkaProps;
-    }
-
-    public static void main(String[] args) throws Exception {
-        final List<HttpHost> httpHosts = new ArrayList<>();
-        httpHosts.add(new HttpHost("localhost", 9200, "http"));
-
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final Properties kafkaProps = getKafkaProps();
-        final FlinkKafkaConsumer011<String> eventsConsumer = new FlinkKafkaConsumer011<>(
+        return new FlinkKafkaConsumer011<>(
                 TOPIC,
                 new SimpleStringSchema(),
                 kafkaProps
         );
-        final DataStream<String> events = env
-                .addSource(eventsConsumer)
-                .name("Event Consumer");
+    }
 
+    private static ElasticsearchSink<String> createElasticSink() {
+        final List<HttpHost> elasticHosts = new ArrayList<>();
+        elasticHosts.add(HttpHost.create(ELASTIC_SERVER));
         final ElasticsearchSink.Builder<String> esSinkBuilder = new ElasticsearchSink.Builder<>(
-                httpHosts,
-                new ElasticsearchSinkFunction<String>() {
-                    public IndexRequest createIndexRequest(String element) {
-                        final Event event = new Event(element);
-                        final HashMap<String, Double> location = new HashMap<>();
-                        location.put("lat", event.getLat());
-                        location.put("lon", event.getLon());
-
-                        final Map<String, Object> json = new HashMap<>();
-                        json.put("ctn", event.getCtn());
-                        json.put("location", location);
-                        json.put("timestamp", event.getTimestamp());
-
-                        return Requests.indexRequest()
-                                .index("events")
+                elasticHosts,
+                (element, ctx, indexer) -> {
+                    final Event userLocation;
+                    try {
+                        userLocation = new UserLocation(element);
+                    } catch (EventParseException e) {
+                        LOGGER.error(e.getMessage());
+                        return;
+                    }
+                    indexer.add(
+                        Requests.indexRequest()
+                                .index(ELASTIC_INDEX)
                                 .type("_doc")
-                                .source(json);
-                    }
-
-                    @Override
-                    public void process(String element, RuntimeContext ctx, RequestIndexer indexer) {
-                        indexer.add(createIndexRequest(element));
-                    }
+                                .source(userLocation.toJson())
+                    );
                 }
         );
         esSinkBuilder.setBulkFlushMaxActions(1);
-        events.addSink(esSinkBuilder.build());
+        return esSinkBuilder.build();
+    }
+
+    public static void main(String[] args) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final FlinkKafkaConsumer011<String> kafkaConsumer = createKafkaConsumer();
+        final ElasticsearchSink<String> elasticSink = createElasticSink();
+        env.addSource(kafkaConsumer).addSink(elasticSink);
         env.execute();
     }
 }
