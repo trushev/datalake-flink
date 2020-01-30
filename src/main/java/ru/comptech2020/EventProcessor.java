@@ -1,71 +1,31 @@
 package ru.comptech2020;
 
-import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
-import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
-import org.apache.http.HttpHost;
-import org.elasticsearch.client.Requests;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.apache.flink.streaming.api.functions.source.SourceFunction;
 import ru.comptech2020.events.Event;
-import ru.comptech2020.events.UserLocation;
-import ru.comptech2020.exceptions.EventParseException;
+import ru.comptech2020.middlewares.ParseEvent;
+import ru.comptech2020.sinks.ElasticSink;
+import ru.comptech2020.sources.KafkaConsumer;
 
-import java.util.*;
+import java.util.Optional;
 
 public class EventProcessor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventProcessor.class);
-
     private static final String ZOOKEEPER = "localhost:2181";
     private static final String KAFKA_SERVER = "localhost:9092";
     private static final String TOPIC = "events";
     private static final String GROUP_ID = "group_id";
     private static final String ELASTIC_SERVER = "localhost:9200";
     private static final String ELASTIC_INDEX = "events";
-
-    private static FlinkKafkaConsumer011<String> createKafkaConsumer() {
-        final Properties kafkaProps = new Properties();
-        kafkaProps.setProperty("bootstrap.servers", KAFKA_SERVER);
-        kafkaProps.setProperty("zookeeper.connect", ZOOKEEPER);
-        kafkaProps.setProperty("group.id", GROUP_ID);
-        return new FlinkKafkaConsumer011<>(
-                TOPIC,
-                new SimpleStringSchema(),
-                kafkaProps
-        );
-    }
-
-    private static ElasticsearchSink<String> createElasticSink() {
-        final List<HttpHost> elasticHosts = new ArrayList<>();
-        elasticHosts.add(HttpHost.create(ELASTIC_SERVER));
-        final ElasticsearchSink.Builder<String> esSinkBuilder = new ElasticsearchSink.Builder<>(
-                elasticHosts,
-                (element, ctx, indexer) -> {
-                    final Event userLocation;
-                    try {
-                        userLocation = new UserLocation(element);
-                    } catch (EventParseException e) {
-                        LOGGER.error(e.getMessage());
-                        return;
-                    }
-                    indexer.add(
-                        Requests.indexRequest()
-                                .index(ELASTIC_INDEX)
-                                .type("_doc")
-                                .source(userLocation.toJson())
-                    );
-                }
-        );
-        esSinkBuilder.setBulkFlushMaxActions(1);
-        return esSinkBuilder.build();
-    }
+//    private static final String EVENT_TYPE = "user_location";
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final FlinkKafkaConsumer011<String> kafkaConsumer = createKafkaConsumer();
-        final ElasticsearchSink<String> elasticSink = createElasticSink();
-        env.addSource(kafkaConsumer).addSink(elasticSink);
+        final SourceFunction<String> kafkaConsumer = KafkaConsumer.of(ZOOKEEPER, KAFKA_SERVER, TOPIC, GROUP_ID);
+        final MapFunction<String, Optional<Event>> parseEvent = new ParseEvent();
+        final SinkFunction<Optional<Event>> elasticSink = ElasticSink.of(ELASTIC_SERVER, ELASTIC_INDEX);
+        env.addSource(kafkaConsumer).map(parseEvent).addSink(elasticSink);
         env.execute();
     }
 }
