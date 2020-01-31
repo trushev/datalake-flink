@@ -1,3 +1,3 @@
 #!/bin/bash
-
-"$1"/bin/zookeeper-server-start.sh "$1"/config/zookeeper.properties & "$1"/bin/kafka-server-start.sh "$1"/config/server.properties
+dir=kafka_2.11-0.11.0.3
+$dir/bin/zookeeper-server-start.sh $dir/config/zookeeper.properties & $dir/bin/kafka-server-start.sh $dir/config/server.properties
