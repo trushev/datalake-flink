@@ -5,6 +5,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.Requests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,16 +16,21 @@ import ru.comptech2020.events.Event;
 import ru.comptech2020.events.UserLocation;
 import ru.comptech2020.exceptions.EventParseException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 public class EventProcessor {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventProcessor.class);
 
     private static final String ZOOKEEPER = "localhost:2181";
     private static final String KAFKA_SERVER = "localhost:9092";
+//    private static final String ZOOKEEPER = "10.9.38.200:2181";
+//    private static final String KAFKA_SERVER = "10.9.38.200:9092";
     private static final String TOPIC = "events";
     private static final String GROUP_ID = "group_id";
-    private static final String ELASTIC_SERVER = "localhost:9200";
+    private static final String ELASTIC_SERVER = "https://17f27b15889d4e3ea0ab0ec615657169.us-east-1.aws.found.io:9243";
+//    private static final String ELASTIC_SERVER = "10.9.78.64:9200";
     private static final String ELASTIC_INDEX = "events";
 
     private static FlinkKafkaConsumer011<String> createKafkaConsumer() {
@@ -52,17 +61,33 @@ public class EventProcessor {
                     indexer.add(
                         Requests.indexRequest()
                                 .index(ELASTIC_INDEX)
-                                .type("_doc")
+                                .type("_doc") // since 7.x version types is deprecated
                                 .source(userLocation.toJson())
                     );
                 }
         );
-        esSinkBuilder.setBulkFlushMaxActions(1);
+        esSinkBuilder.setBulkFlushMaxActions((int)1e5);
+        esSinkBuilder.setBulkFlushInterval(5000);
+
+        esSinkBuilder.setRestClientFactory(
+                restClientBuilder -> {
+                    restClientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
+
+                        // elasticsearch username and password
+                        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                        credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("elastic",
+                                "DHNw88IzJjc7m4IK9zJm7qJV"));
+
+                        return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+                    });
+                }
+        );
         return esSinkBuilder.build();
     }
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        env.enableCheckpointing(5000);
         final FlinkKafkaConsumer011<String> kafkaConsumer = createKafkaConsumer();
         final ElasticsearchSink<String> elasticSink = createElasticSink();
         env.addSource(kafkaConsumer).addSink(elasticSink);
