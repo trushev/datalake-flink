@@ -23,7 +23,8 @@ public class ElasticSink {
                         )
                 )
         );
-        esSinkBuilder.setBulkFlushMaxActions(1);
+        esSinkBuilder.setBulkFlushMaxActions(15_000);
+        esSinkBuilder.setBulkFlushInterval(1000L);
         return esSinkBuilder.build();
     }
 }

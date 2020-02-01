@@ -10,13 +10,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserLocation implements Event {
+    private static final ZoneId ZONE_ID = ZoneId.of("UTC");
+    private static final String CSV_DELIMITER = ",";
+
     private String ctn;
     private double lat;
     private double lon;
     private String timestamp;
 
     public UserLocation(String csv) {
-        final String[] fields = csv.split(",");
+        final String[] fields = csv.split(CSV_DELIMITER);
         if (fields.length != 4) {
             throw new EventParseException("Invalid number of fields in record: " + csv);
         }
@@ -28,13 +31,9 @@ public class UserLocation implements Event {
 
     @Override
     public Map<String, Object> toJson() {
-        final HashMap<String, Double> location = new HashMap<>();
-        location.put("lat", lat);
-        location.put("lon", lon);
-
         final Map<String, Object> json = new HashMap<>();
         json.put("ctn", ctn);
-        json.put("location", location);
+        json.put("location", String.format("%s,%s", lat, lon));
         json.put("timestamp", timestamp);
         return Collections.unmodifiableMap(json);
     }
@@ -47,9 +46,7 @@ public class UserLocation implements Event {
             throw new EventParseException("Invalid timestamp: " + string);
         }
         final Instant instant = Instant.ofEpochMilli(milliseconds);
-        // timezone?
-        final ZoneId zoneId = ZoneId.systemDefault();
-        final LocalDateTime localDateTime = instant.atZone(zoneId).toLocalDateTime();
+        final LocalDateTime localDateTime = instant.atZone(ZONE_ID).toLocalDateTime();
         return localDateTime.toString();
     }
 
