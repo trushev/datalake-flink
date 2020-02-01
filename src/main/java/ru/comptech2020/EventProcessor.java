@@ -5,6 +5,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.elasticsearch6.ElasticsearchSink;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer011;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.Requests;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +16,9 @@ import ru.comptech2020.events.Event;
 import ru.comptech2020.events.UserLocation;
 import ru.comptech2020.exceptions.EventParseException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 public class EventProcessor {
     private static final String ZOOKEEPER = "192.168.1.173:2181";
@@ -53,17 +59,33 @@ public class EventProcessor {
                     indexer.add(
                         Requests.indexRequest()
                                 .index(ELASTIC_INDEX)
-                                .type("_doc")
+                                .type("_doc") // since 7.x version types is deprecated
                                 .source(userLocation.toJson())
                     );
                 }
         );
-        esSinkBuilder.setBulkFlushMaxActions(1);
+        esSinkBuilder.setBulkFlushMaxActions((int)1e5);
+        esSinkBuilder.setBulkFlushInterval(5000);
+
+        esSinkBuilder.setRestClientFactory(
+                restClientBuilder -> {
+                    restClientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
+
+                        // elasticsearch username and password
+                        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                        credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("elastic",
+                                "DHNw88IzJjc7m4IK9zJm7qJV"));
+
+                        return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+                    });
+                }
+        );
         return esSinkBuilder.build();
     }
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        env.enableCheckpointing(5000);
         final FlinkKafkaConsumer011<String> kafkaConsumer = createKafkaConsumer();
         final ElasticsearchSink<String> elasticSink = createElasticSink();
         env.addSource(kafkaConsumer).addSink(elasticSink);
