@@ -18,7 +18,7 @@ import java.util.zip.ZipFile;
 
 /**
  * gsutil -m cp -R gs://openmobiledata_public .
- * files: 4906 of 4907, lines: 2080763
+ * files: 16795 of 16796, lines: 5733852
  */
 public class DataSet {
     public static void main(String[] args) throws IOException {
@@ -39,12 +39,12 @@ public class DataSet {
                 final JsonNode json = objectMapper.readTree(inputStream);
                 json.elements().forEachRemaining(event -> {
                     final String ctn = event.get("id").asText();
-                    final String timestamp = event.get("timestamp").asText();
+                    final long timestamp = event.get("timestamp").asLong() / 1000;
                     final JsonNode location = event.get("device_properties").get("location");
                     final String lat = location.get("latitude").asText();
                     final String lon = location.get("longitude").asText();
                     if (!lat.equals("0.0") || !lon.equals("0.0")) {
-                        final String record = String.join(",", ctn, lat, lon, timestamp) + "\n";
+                        final String record = String.join(",", ctn, lat, lon, Long.toString(timestamp)) + "\n";
                         try {
                             fileOutputStream.write(record.getBytes());
                         } catch (IOException e) {
