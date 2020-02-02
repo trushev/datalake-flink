@@ -8,6 +8,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class UserLocation implements Event {
     private static final ZoneId ZONE_ID = ZoneId.of("UTC");
@@ -27,6 +28,13 @@ public class UserLocation implements Event {
         lat = parseGeo(fields[1], -90, 90);
         lon = parseGeo(fields[2], -180, 180);
         timestamp = parseTimestamp(fields[3]);
+    }
+
+    public UserLocation(String ctn, double lat, double lon, String timestamp) {
+        this.ctn = ctn;
+        this.lat = lat;
+        this.lon = lon;
+        this.timestamp = timestamp;
     }
 
     @Override
@@ -63,5 +71,31 @@ public class UserLocation implements Event {
             ));
         }
         return geo;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        UserLocation that = (UserLocation) o;
+        return Double.compare(that.lat, lat) == 0 &&
+                Double.compare(that.lon, lon) == 0 &&
+                Objects.equals(ctn, that.ctn) &&
+                Objects.equals(timestamp, that.timestamp);
+    }
+
+    @Override
+    public String toString() {
+        return "UserLocation{" +
+                "ctn='" + ctn + '\'' +
+                ", lat=" + lat +
+                ", lon=" + lon +
+                ", timestamp='" + timestamp + '\'' +
+                '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ctn, lat, lon, timestamp);
     }
 }
