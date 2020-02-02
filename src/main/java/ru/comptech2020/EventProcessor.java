@@ -27,8 +27,8 @@ public class EventProcessor {
     // private static final String KAFKA_SERVER = "localhost:9092";
     private static final String TOPIC = "events";
     private static final String GROUP_ID = "group_id";
-    private static final String ELASTIC_SERVER = "https://afeff8847d7040998ce840f91a916ce2.us-east-1.aws.found.io:9243";
-    // private static final String ELASTIC_SERVER = "localhost:9200";
+    // private static final String ELASTIC_SERVER = "https://afeff8847d7040998ce840f91a916ce2.us-east-1.aws.found.io:9243";
+    private static final String ELASTIC_SERVER = "host.docker.internal:9200";
     private static final String ELASTIC_INDEX = "events";
 
     private static FlinkKafkaConsumer011<String> createKafkaConsumer() {
@@ -53,7 +53,7 @@ public class EventProcessor {
                     try {
                         userLocation = new UserLocation(element);
                     } catch (EventParseException e) {
-                        LOGGER.error(e.getMessage());
+                        //LOGGER.error(e.getMessage());
                         return;
                     }
                     indexer.add(
