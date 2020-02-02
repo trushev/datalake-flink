@@ -12,17 +12,18 @@ import java.util.Optional;
 public class ParseEvent implements MapFunction<String, Optional<Event>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(ParseEvent.class);
 
+    private final String eventType;
+    public ParseEvent(String eventType) {
+        this.eventType = eventType;
+    }
+
     @Override
     public Optional<Event> map(String value) {
         try {
-//            switch (EVENT_TYPE) {
-//                case ("user_location"):
-//                    return Optional.of(new UserLocation(element));
-//                default:
-//                    throw new IllegalArgumentException("Illegal event type: " + EVENT_TYPE);
-//            }
-            return Optional.of(new UserLocation(value));
-
+            if ("user_location".equals(eventType)) {
+                return Optional.of(new UserLocation(value));
+            }
+            throw new IllegalArgumentException("Illegal event type: " + eventType);
         } catch (EventParseException e) {
             LOGGER.error(e.getMessage());
             return Optional.empty();

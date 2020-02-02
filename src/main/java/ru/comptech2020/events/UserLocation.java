@@ -21,7 +21,7 @@ public class UserLocation implements Event {
     public UserLocation(String csv) {
         final String[] fields = csv.split(CSV_DELIMITER);
         if (fields.length != 4) {
-            throw new EventParseException("Invalid number of fields in record: " + csv);
+            throw new EventParseException("Illegal number of fields in record: " + csv);
         }
         ctn = fields[0];
         lat = parseGeo(fields[1], -90, 90);
@@ -43,7 +43,7 @@ public class UserLocation implements Event {
         try {
             milliseconds = Long.parseLong(string);
         } catch (NumberFormatException e) {
-            throw new EventParseException("Invalid timestamp: " + string);
+            throw new EventParseException("Illegal timestamp: " + string);
         }
         final Instant instant = Instant.ofEpochMilli(milliseconds);
         final LocalDateTime localDateTime = instant.atZone(ZONE_ID).toLocalDateTime();
@@ -55,11 +55,13 @@ public class UserLocation implements Event {
         try {
             geo = Double.parseDouble(string);
         } catch (NumberFormatException e) {
-            throw new EventParseException("Invalid geo coordinate: " + string);
+            throw new EventParseException("Illegal geo coordinate: " + string);
         }
-        if (geo < min) {
-            return min;
+        if (geo < min || geo > max) {
+            throw new EventParseException(String.format(
+                    "Illegal geo coordinate: %s, supported range: [%s, %s]", geo, min, max
+            ));
         }
-        return Math.min(geo, max);
+        return geo;
     }
 }

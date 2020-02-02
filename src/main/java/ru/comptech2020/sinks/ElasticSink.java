@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class ElasticSink {
-    public static SinkFunction<Optional<Event>> of(String server, String index) {
+    public static SinkFunction<Optional<Event>> of(String server, String index, int batchSize, long flushInterval) {
         final List<HttpHost> elasticHosts = new ArrayList<>();
         elasticHosts.add(HttpHost.create(server));
         final ElasticsearchSink.Builder<Optional<Event>> esSinkBuilder = new ElasticsearchSink.Builder<>(
@@ -23,8 +23,8 @@ public class ElasticSink {
                         )
                 )
         );
-        esSinkBuilder.setBulkFlushMaxActions(15_000);
-        esSinkBuilder.setBulkFlushInterval(1000L);
+        esSinkBuilder.setBulkFlushMaxActions(batchSize);
+        esSinkBuilder.setBulkFlushInterval(flushInterval);
         return esSinkBuilder.build();
     }
 }
