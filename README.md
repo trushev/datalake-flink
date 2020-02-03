@@ -1,8 +1,7 @@
 ## Данный проект содержит код для Apache Flink
 
 *Для запуска процессора не через докер необходимо запустить*
-1. Zookeeper
-2. Kafka
+1. Zookeeper, Kafka
 ```
 wget https://archive.apache.org/dist/kafka/0.11.0.3/kafka_2.11-0.11.0.3.tgz
 tar -xzf kafka_2.11-0.11.0.3.tgz
@@ -10,11 +9,11 @@ cd kafka_2.11-0.11.0.3
 ./bin/zookeeper-server-start.sh config/zookeeper.properties
 ./bin/kafka-server-start.sh config/server.properties
 ```
-3. Создать топик
+2. Создать топик
 ```
 ./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic events
 ```
-4. Скачать и запустить образы ES и Kibana
+3. Скачать и запустить образы ES и Kibana
 ```
 docker pull elasticsearch:7.5.2
 docker pull kibana:7.5.2
@@ -22,7 +21,7 @@ docker network create mynetwork
 docker run -d --name elasticsearch --net mynetwork -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:7.5.2
 docker run -d --name kibana --net mynetwork -p 5601:5601 kibana:7.5.2
 ```
-5. Создать индекс в ES
+4. Создать индекс в ES
 ```
 curl -X PUT "localhost:9200/events?pretty" -H 'Content-Type: application/json' -d'
 {
