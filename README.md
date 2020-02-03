@@ -15,3 +15,11 @@ mvn exec:java -Dexec.mainClass=ru.comptech2020.EventProcessor
 docker build . -t datalake-flink
 docker run --name app -d datalake-flink
 ```
+
+*Запуск во Flink кластере*
+
+```
+mvn clean package
+~/flink-1.9.0/bin/start-cluster.sh
+~/flink-1.9.0/bin/flink run target/datalake-flink-1.0.0.jar
+```

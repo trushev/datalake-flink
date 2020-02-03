@@ -28,7 +28,7 @@ public class DataSet {
         final ObjectMapper objectMapper = new ObjectMapper();
         final List<Path> paths = Files.list(Paths.get(folder)).collect(Collectors.toList());
         final int size = paths.size();
-        int fileCount = 0;
+        int fileCount = 1;
         final long[] recordCount = {0};
         for (Path path : paths) {
             final ZipFile zipFile = new ZipFile(path.toString());
