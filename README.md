@@ -27,13 +27,13 @@ mvn clean package
 *Запуск с параметрами*
 ```
 ~/flink-1.9.0/bin/flink run target/datalake-flink-1.0.0.jar \
--zookeeper localhost:2181 \
--kafka localhost:9092 \
--topic events \
--group-id group_id \
--elastic localhost:9200 \
--index events \
--event-type user_location \
--batch-size 15000 \
--flush-interval 1000
+    -zookeeper localhost:2181 \
+    -kafka localhost:9092 \
+    -topic events \
+    -group-id group_id \
+    -elastic localhost:9200 \
+    -index events \
+    -event-type user_location \
+    -batch-size 15000 \
+    -flush-interval 1000
 ```
